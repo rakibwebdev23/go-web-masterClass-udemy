@@ -14,7 +14,7 @@ func (app *application) routes() http.Handler {
 	mux.HandleFunc("/about", app.about)
 	mux.HandleFunc("/contact", app.contact)
 
-	handler := app.recover(app.logger(mux))
+	handler := app.recover(app.logger(app.session.Enable(mux)))
 
 	return handler
 }

@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"time"
 
+	"github.com/golangcollege/sessions"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -20,6 +22,7 @@ type application struct {
 	mux         *http.ServeMux
 	templateDir string
 	tp          *TemplateRenderer
+	session     *sessions.Session
 }
 
 func main() {
@@ -31,12 +34,19 @@ func main() {
 	}
 	defer db.Close()
 
+	//session setup for user login
+	session := sessions.New([]byte("u46IpCV9y5Vlur8YvODJEhgOY8m9JVE4"))
+	session.Lifetime = 24 * time.Hour
+	session.Secure = false // ⚠️ local env false, production true
+	session.SameSite = http.SameSiteLaxMode
+
 	app := &application{
 		errorLogger: log.New(log.Writer(), "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile),
 		infoLogger:  log.New(log.Writer(), "INFO\t", log.Ldate|log.Ltime),
 		userRepo:    NewSQLUserRepository(db),
 		mux:         mux,
 		templateDir: "./templates",
+		session:     session,
 	}
 
 	app.tp = NewTemplateRenderer(app.templateDir, true)

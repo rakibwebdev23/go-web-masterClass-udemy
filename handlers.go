@@ -5,6 +5,7 @@ import "net/http"
 var htmlContent = `...`
 
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
+	app.infoLogger.Printf("session data: %v", app.session.GetString(r, "userId"))
 	app.render(w, "index.html", nil)
 }
 
