@@ -30,7 +30,7 @@ func (t *TemplateRenderer) Render(w http.ResponseWriter, templateName string, da
 		return
 	}
 
-	err = tmpl.Execute(w, data)
+	err = tmpl.ExecuteTemplate(w, "base.html", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -69,15 +69,19 @@ func (t *TemplateRenderer) parseTemplate(templateName string) (*template.Templat
 
 	files := []string{templatePath}
 	
-	layoutPath := path.Join(t.templateDir, "layout/*.html")
+	layoutPath := path.Join(t.templateDir, "layouts/*.html")
 	layout, err := filepath.Glob(layoutPath)
-
 	if err == nil {
 		files = append(files, layout...)
 	}
 
-	tmpl,err := template.ParseFiles(files...)
+	partialsPath := path.Join(t.templateDir, "partials/*.html")
+	partials, err := filepath.Glob(partialsPath)
+	if err == nil {
+		files = append(files, partials...)
+	}
 
+	tmpl, err := template.ParseFiles(files...)
 	if err != nil {
 		return nil, err
 	}
