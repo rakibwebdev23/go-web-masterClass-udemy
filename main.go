@@ -19,6 +19,7 @@ type application struct {
 	userRepo    UserRepository
 	mux         *http.ServeMux
 	templateDir string
+	tp          *TemplateRenderer
 }
 
 func main() {
@@ -37,6 +38,8 @@ func main() {
 		mux:         mux,
 		templateDir: "./templates",
 	}
+
+	app.tp = NewTemplateRenderer(app.templateDir, true)
 
 	log.Println("Server is running on http://localhost:8080")
 
