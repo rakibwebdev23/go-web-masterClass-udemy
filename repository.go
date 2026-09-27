@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -10,8 +11,11 @@ import (
 type UserRepository interface {
 	CreateUser(name, email, hashedPassword, avatar string) (int64, error)
 	GetUserByEmail(email string) (*User, error)
+	Authenticate(email, password string) (*User, error)
 	GetUsers() ([]User, error)
 }
+
+var errInvalidCredentials = errors.New("invalid email or password")
 
 type SQLUserRepository struct {
 	db *sql.DB // Assuming you have a database connection here
@@ -49,7 +53,7 @@ func (r *SQLUserRepository) CreateUser(name, email, hashedPassword, avatar strin
 		return 0, err
 	}
 
-	userID, err := res.LastInsertId();
+	userID, err := res.LastInsertId()
 	if err != nil {
 		return 0, err
 	}
@@ -58,7 +62,7 @@ func (r *SQLUserRepository) CreateUser(name, email, hashedPassword, avatar strin
 	if err != nil {
 		return 0, err
 	}
-	defer profileStmt.Close();
+	defer profileStmt.Close()
 
 	_, err = profileStmt.Exec(userID, avatar)
 	if err != nil {
@@ -78,13 +82,29 @@ func (r *SQLUserRepository) GetUserByEmail(email string) (*User, error) {
 
 	var user User
 
-	err := row.Scan(&user.ID, &user.Name, &user.Email, &user.HashedPassword, &user.CreatedAt, &user.Profile.ID, &user.Profile.AvatarURL, &user.Profile.CreatedAt);
+	err := row.Scan(&user.ID, &user.Name, &user.Email, &user.HashedPassword, &user.CreatedAt, &user.Profile.ID, &user.Profile.AvatarURL, &user.Profile.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 
 	user.Profile.UserId = user.ID
 	return &user, nil
+}
+
+func (r *SQLUserRepository) Authenticate(email, password string) (*User, error) {
+	user, err := r.GetUserByEmail(email)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, errInvalidCredentials
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password)); err != nil {
+		return nil, errInvalidCredentials
+	}
+
+	return user, nil
 }
 
 func (r *SQLUserRepository) GetUsers() ([]User, error) {
@@ -96,7 +116,7 @@ func (r *SQLUserRepository) GetUsers() ([]User, error) {
 	defer rows.Close()
 
 	var users []User
-	
+
 	for rows.Next() {
 		var user User
 		var profile Profile
@@ -109,4 +129,4 @@ func (r *SQLUserRepository) GetUsers() ([]User, error) {
 	}
 
 	return users, nil
-}	
+}

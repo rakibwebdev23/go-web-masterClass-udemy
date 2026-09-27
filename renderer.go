@@ -15,11 +15,17 @@ type TemplateRenderer struct {
 	templateDir string
 }
 
-func NewTemplateRenderer(templateDir string, isDev bool) *TemplateRenderer {
+type templateData struct {
+	Form            Form
+	IsAuthenticated bool
+	Flash           string
+}
+
+func NewTemplateRenderer(templateDir string , isDev bool) *TemplateRenderer {
 	return &TemplateRenderer{
 		templateDir: templateDir,
-		cache: make(map[string]*template.Template),
-		dev:   isDev,
+		cache:       make(map[string]*template.Template),
+		dev:         isDev,
 	}
 }
 
@@ -49,10 +55,10 @@ func (t *TemplateRenderer) getTemplate(templateName string) (*template.Template,
 		t.mutex.RUnlock()
 	}
 
-	tmpl, err := t.parseTemplate(templateName);
+	tmpl, err := t.parseTemplate(templateName)
 
 	if err != nil {
-		return nil, err;
+		return nil, err
 	}
 
 	if !t.dev {
@@ -68,7 +74,7 @@ func (t *TemplateRenderer) parseTemplate(templateName string) (*template.Templat
 	templatePath := path.Join(t.templateDir, templateName)
 
 	files := []string{templatePath}
-	
+
 	layoutPath := path.Join(t.templateDir, "layouts/*.html")
 	layout, err := filepath.Glob(layoutPath)
 	if err == nil {

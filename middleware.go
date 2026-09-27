@@ -1,6 +1,9 @@
 package main
 
 import (
+	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -37,11 +40,37 @@ func (app *application) recover(next http.Handler) http.Handler {
 func (app *application) requireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !app.isAuthenticated(r) {
-			http.Redirect(w, r, fmt.Sprintf("/login/?redirectTo=%s",r.URL.Path), http.StatusSeeOther)
+			http.Redirect(w, r, fmt.Sprintf("/login/?redirectTo=%s", r.URL.Path), http.StatusSeeOther)
 			return
 		}
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		next.ServeHTTP(w, r)
+	})
+}
+
+func (app *application) authenticate(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		exists := app.session.Exists(r, loggedInUserKey)
+		if !exists {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		_, err := app.userRepo.GetUserByEmail(app.session.GetString(r, loggedInUserKey))
+
+		if errors.Is(err, sql.ErrNoRows) {
+			app.session.Remove(r, loggedInUserKey)
+			next.ServeHTTP(w, r)
+			return
+		} else if err != nil {
+			app.serverError(w, err)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), contextAuthKey, true)
+		next.ServeHTTP(w, r.WithContext(ctx))
+
 	})
 }
 

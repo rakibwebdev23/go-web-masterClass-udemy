@@ -37,7 +37,7 @@ func main() {
 	//session setup for user login
 	session := sessions.New([]byte("u46IpCV9y5Vlur8YvODJEhgOY8m9JVE4"))
 	session.Lifetime = 24 * time.Hour
-	session.Secure = false // ⚠️ local env false, production true
+	session.Secure = false
 	session.SameSite = http.SameSiteLaxMode
 
 	app := &application{
@@ -49,7 +49,7 @@ func main() {
 		session:     session,
 	}
 
-	app.tp = NewTemplateRenderer(app.templateDir, true)
+	app.tp = NewTemplateRenderer(app.templateDir, false)
 
 	log.Println("Server is running on http://localhost:8080")
 

@@ -10,7 +10,7 @@ func (app *application) routes() http.Handler {
 	mux := http.NewServeMux()
 
 	defaultMiddleware := alice.New(app.recover, app.logger)
-	secureMiddleware := alice.New(app.session.Enable)
+	secureMiddleware := alice.New(app.session.Enable, app.authenticate)
 
 	fileServer := http.FileServer(http.Dir("./public/"))
 	mux.Handle("/public/", http.StripPrefix("/public", fileServer))
