@@ -9,7 +9,6 @@ const (
 )
 
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
-	// app.infoLogger.Printf("session data: %v", app.session.GetString(r, "userId"))
 	app.render(w, r, "index.html", nil)
 }
 
@@ -129,6 +128,12 @@ func (app *application) contact(w http.ResponseWriter, r *http.Request) {
 
 func (app *application) submit(w http.ResponseWriter, r *http.Request) {
 	app.render(w, r, "submit.html", nil)
+}
+
+func (app *application) logout(w http.ResponseWriter, r *http.Request) {
+	app.session.Remove(r, loggedInUserKey)
+	app.session.Put(r, "flash", "You have been logged out")
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 // package main

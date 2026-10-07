@@ -1,19 +1,38 @@
 {{define "content"}}
-<div class="auth-form">
+<div class="container">
+  <div class="auth-form">
     <h2>Login</h2>
-    <form action="/login" method="POST">
-        <div class="form-group">
-            <label for="email">Email</label>
-            <input type="text" id="email" name="email" required autocomplete="email">
+
+      {{with .Form}}
+      {{with .Errors.Get "generic"}}
+        <div class="error-message">
+          {{.}}
         </div>
+      {{end}}
+      <form action="/login" method="post" autocomplete="off">
         <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required autocomplete="current-password">
+          <label for="email">Email address:</label>
+          <input type="text" id="email" name="email" value="{{.Get "email"}}" required>
+          {{with .Errors.Get "email"}}
+          <p class="inline-error">{{.}}</p>
+          {{end}}
         </div>
-        <button type="submit" class="btn-primary">Login</button>
+
+        <div class="form-group">
+          <label for="password">Password:</label>
+          <input type="password" id="password" name="password" required>
+          {{with .Errors.Get "password"}}
+          <p class="inline-error">{{.}}</p>
+          {{end}}
+        </div>
+        {{end}}
+
+      <button type="submit" class="btn-primary">Login</button>
     </form>
-    <div class="auth-link">
-        Don't have an account? <a href="/register">Register here</a>
-    </div>
+
+    <p class="auth-link">
+      Don't have an account? <a href="/register">Register here</a>
+    </p>
+  </div>
 </div>
 {{end}}
