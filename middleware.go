@@ -10,7 +10,7 @@ import (
 
 const (
 	contextAuthKey = "isAuthKey"
-	contextKey     = "isAuthKey"
+	contextUserKey     = "isAuthKey"
 )
 
 // এখানে মূলত দুইটা HTTP middleware আছে:
@@ -57,7 +57,7 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 			return
 		}
 
-		_, err := app.userRepo.GetUserByEmail(app.session.GetString(r, loggedInUserKey))
+		u, err := app.userRepo.GetUserByEmail(app.session.GetString(r, loggedInUserKey))
 
 		if errors.Is(err, sql.ErrNoRows) {
 			app.session.Remove(r, loggedInUserKey)
@@ -69,6 +69,7 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 		}
 
 		ctx := context.WithValue(r.Context(), contextAuthKey, true)
+		ctx = context.WithValue(ctx, contextUserKey, u)
 		next.ServeHTTP(w, r.WithContext(ctx))
 
 	})

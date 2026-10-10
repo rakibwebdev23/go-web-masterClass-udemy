@@ -151,7 +151,9 @@ func (app *application) submit(w http.ResponseWriter, r *http.Request) {
 
 	title := r.FormValue("title")
 	url := r.FormValue("url")
-	id, err := app.postRepo.CreatePost(title, url, 1)
+
+	user := app.getUserFromContext(r.Context())
+	id, err := app.postRepo.CreatePost(title, url, user.ID)
 	if err != nil{
 		app.errorLogger.Printf("error creating post: %s\n", err.Error())
 		form.Errors.Add("generic", err.Error())
@@ -167,7 +169,7 @@ func (app *application) submit(w http.ResponseWriter, r *http.Request) {
 
 	return
 		 
-}
+	}
 
 	app.render(w, r, "submit.html", &templateData{
 		Form: *NewForm(r.PostForm),
