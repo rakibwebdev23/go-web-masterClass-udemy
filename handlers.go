@@ -1,6 +1,8 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+)
 
 var htmlContent = `...`
 
@@ -127,7 +129,49 @@ func (app *application) contact(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) submit(w http.ResponseWriter, r *http.Request) {
-	app.render(w, r, "submit.html", nil)
+
+	if r.Method == http.MethodPost{
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+		form := NewForm(r.PostForm)
+		form.Required("title", "url").
+		MaxLength("title", 255).
+		MaxLength("url", 255).
+		MinLength("url", 3)
+
+		if !form.Valid(){
+		form.Errors.Add("generic", "This submited data was not valid")
+		app.render(w, r, "submit.html", &templateData{
+			Form: *form,
+		})
+		return
+	}
+
+	title := r.FormValue("title")
+	url := r.FormValue("url")
+	id, err := app.postRepo.CreatePost(title, url, 1)
+	if err != nil{
+		app.errorLogger.Printf("error creating post: %s\n", err.Error())
+		form.Errors.Add("generic", err.Error())
+		app.render(w, r, "submit.html", &templateData{
+			Form: *form,
+		})
+		return
+	}
+
+	app.session.Put(r, "flash", "Your link has been submitted")
+	app.infoLogger.Printf("post created with %d", id)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+
+	return
+		 
+}
+
+	app.render(w, r, "submit.html", &templateData{
+		Form: *NewForm(r.PostForm),
+	})
 }
 
 func (app *application) logout(w http.ResponseWriter, r *http.Request) {
