@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 )
 
 var htmlContent = `...`
@@ -10,8 +13,46 @@ const (
 	loggedInUserKey = "logged_in_user_id"
 )
 
+func (app *application) readIntWithDefault(r *http.Request, key string, dvalue int) int {
+	v, err := strconv.Atoi(r.URL.Query().Get(key))
+	if err != nil {
+		return dvalue
+	}
+	return v
+}
+
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
-	app.render(w, r, "index.html", nil)
+
+	filter := Filter{
+		Query:    r.URL.Query().Get("q"),
+		OrderBy:  r.URL.Query().Get("order_by"),
+		Page:     app.readIntWithDefault(r, "page", 1),
+		PageSize: app.readIntWithDefault(r, "page_size", 50),
+	}
+
+	posts, metadata, err := app.postRepo.GetAll(filter)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	app.infoLogger.Printf("\nMetadata: %+v\n", metadata)
+
+	pageLink := func(page int) string {
+		query := url.Values{}
+		query.Set("q", filter.Query)
+		query.Set("order_by", filter.OrderBy)
+		query.Set("page", strconv.Itoa(page))
+		query.Set("page_size", strconv.Itoa(filter.PageSize))
+		return "/?" + query.Encode()
+	}
+
+	app.render(w, r, "index.html", &templateData{
+		Posts:    posts,
+		Metadata: metadata,
+		NextLink: pageLink(metadata.NextPage),
+		PrevLink: pageLink(metadata.PreviousPage),
+	})
 }
 
 func (app *application) login(w http.ResponseWriter, r *http.Request) {
@@ -122,6 +163,22 @@ func (app *application) register(w http.ResponseWriter, r *http.Request) {
 }
 func (app *application) about(w http.ResponseWriter, r *http.Request) {
 	app.render(w, r, "about.html", nil)
+}
+
+func (app *application) vote(w http.ResponseWriter, r *http.Request) {
+	postID := app.readIntWithDefault(r, "post_id", 0)
+	u := app.getUserFromContext(r.Context())
+
+	err := app.postRepo.AddVote(u.ID, postID)
+	if err != nil {
+		app.errorLogger.Printf("error adding vote: %s\n", err.Error())
+		app.session.Put(r, "flash", "voting failed")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	app.session.Put(r, "flash", fmt.Sprintf("You voted for post with id #%d", postID))
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func (app *application) contact(w http.ResponseWriter, r *http.Request) {

@@ -308,7 +308,7 @@ func (r *SQLPostRepository) GetComments(postID int) ([]Comment, error) {
 
 	return comments, nil
 }
-
+// GetVoteCountsHuman() — Vote সংখ্যা দেখানো
 func (p *Post) GetVoteCountsHuman() string {
 	if p.VoteCount > 1 {
 		return fmt.Sprintf("%d votes", p.VoteCount)
@@ -317,6 +317,7 @@ func (p *Post) GetVoteCountsHuman() string {
 	return fmt.Sprintf("%d vote", p.VoteCount)
 }
 
+// GetCommentCountsHuman() — Comment সংখ্যা দেখানো
 func (p *Post) GetCommentCountsHuman() string {
 	if p.CommentCount > 1 {
 		return fmt.Sprintf("%d comments", p.CommentCount)
@@ -325,10 +326,12 @@ func (p *Post) GetCommentCountsHuman() string {
 	return fmt.Sprintf("%d comment", p.CommentCount)
 }
 
+// CreatedAtHuman() — কতক্ষণ আগে পোস্ট তৈরি হয়েছে
 func (p *Post) CreatedAtHuman() string {
 	return carbon.NewCarbon(p.CreatedAt).DiffForHumans()
 }
 
+// Host() — URL থেকে domain/host বের করা
 func (p *Post) Host() string {
 	ur, err := url.Parse(p.URL)
 	if err != nil {
