@@ -3,11 +3,14 @@ module web-dev-masterclass
 go 1.26.5
 
 require (
+	github.com/golang-module/carbon/v2 v2.6.9
 	github.com/mattn/go-sqlite3 v1.14.50
 	golang.org/x/crypto v0.55.0
 )
 
 require github.com/justinas/alice v1.2.0
+
+require github.com/dromara/carbon/v2 v2.6.9 // indirect
 
 require (
 	github.com/golangcollege/sessions v1.2.0

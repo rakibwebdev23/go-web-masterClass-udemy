@@ -1,3 +1,7 @@
+github.com/dromara/carbon/v2 v2.6.9 h1:kx4D7qqLmNkKRLYo/2n1owtu/A1hfPs4WTGYC2tUFFA=
+github.com/dromara/carbon/v2 v2.6.9/go.mod h1:7GXqCUplwN1s1b4whGk2zX4+g4CMCoDIZzmjlyt0vLY=
+github.com/golang-module/carbon/v2 v2.6.9 h1:GtDPA0O5qaszAPs51whhpimtt3FEEeM90gRBuyWR1W4=
+github.com/golang-module/carbon/v2 v2.6.9/go.mod h1:2JsYhwO7UPnUr+1hfsELAP9qjgIWzNuEz89tA1v4sY0=
 github.com/golangcollege/sessions v1.2.0 h1:2aD9jac/N8NC/y+NEoirYMGlYymzS0ZQN6ASudm4P0s=
 github.com/golangcollege/sessions v1.2.0/go.mod h1:7iTf/FrZku0hWyjV95lES7abH89WBlyBjPyA1htnuks=
 github.com/justinas/alice v1.2.0 h1:+MHSA/vccVCF4Uq37S42jwlkvI2Xzl7zTPCN5BnZNVo=

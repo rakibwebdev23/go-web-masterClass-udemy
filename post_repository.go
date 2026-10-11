@@ -3,9 +3,13 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"math"
+	"net/url"
 	"strings"
 	"time"
+
+	"github.com/golang-module/carbon/v2"
 )
 
 var (
@@ -305,6 +309,30 @@ func (r *SQLPostRepository) GetComments(postID int) ([]Comment, error) {
 	return comments, nil
 }
 
-// func (r *SQLPostRepository) GetVoteCountsHuman() string{
-// 	if p.voteCount > 0
-// }
+func (p *Post) GetVoteCountsHuman() string {
+	if p.VoteCount > 1 {
+		return fmt.Sprintf("%d votes", p.VoteCount)
+	}
+
+	return fmt.Sprintf("%d vote", p.VoteCount)
+}
+
+func (p *Post) GetCommentCountsHuman() string {
+	if p.CommentCount > 1 {
+		return fmt.Sprintf("%d comments", p.CommentCount)
+	}
+
+	return fmt.Sprintf("%d comment", p.CommentCount)
+}
+
+func (p *Post) CreatedAtHuman() string {
+	return carbon.NewCarbon(p.CreatedAt).DiffForHumans()
+}
+
+func (p *Post) Host() string {
+	ur, err := url.Parse(p.URL)
+	if err != nil {
+		return "<invalid-host>"
+	}
+	return ur.Hostname()
+}
