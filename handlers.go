@@ -32,26 +32,20 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 
 	posts, metadata, err := app.postRepo.GetAll(filter)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		app.serverError(w, err)
 		return
 	}
 
-	app.infoLogger.Printf("\nMetadata: %+v\n", metadata)
-
-	pageLink := func(page int) string {
-		query := url.Values{}
-		query.Set("q", filter.Query)
-		query.Set("order_by", filter.OrderBy)
-		query.Set("page", strconv.Itoa(page))
-		query.Set("page_size", strconv.Itoa(filter.PageSize))
-		return "/?" + query.Encode()
-	}
+	app.infoLog.Printf("\nMetadata: %+v\n", metadata)
 
 	app.render(w, r, "index.html", &templateData{
 		Posts:    posts,
 		Metadata: metadata,
-		NextLink: pageLink(metadata.NextPage),
-		PrevLink: pageLink(metadata.PreviousPage),
+		Query:    filter.Query,
+		NextLink: fmt.Sprintf("/?q=%s&order_by=%s&page=%d&page_size=%d",
+			filter.Query, filter.OrderBy, metadata.NextPage, filter.PageSize),
+		PrevLink: fmt.Sprintf("/?q=%s&order_by=%s&page=%d&page_size=%d",
+			filter.Query, filter.OrderBy, metadata.PrevPage, filter.PageSize),
 	})
 }
 
@@ -78,7 +72,7 @@ func (app *application) login(w http.ResponseWriter, r *http.Request) {
 		if !form.Valid() {
 			form.Errors.Add("generic", "The data you submitted was not valid")
 			app.render(w, r, "login.html", &templateData{
-				Form: *form,
+				Form: form,
 			})
 			return
 		}
@@ -89,7 +83,7 @@ func (app *application) login(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			form.Errors.Add("generic", err.Error())
 			app.render(w, r, "login.html", &templateData{
-				Form: *form,
+				Form: form,
 			})
 			return
 		}
@@ -97,14 +91,14 @@ func (app *application) login(w http.ResponseWriter, r *http.Request) {
 		app.session.Put(r, loggedInUserKey, email)
 		app.session.Put(r, "flash", "You are logged in")
 
-		app.infoLogger.Println("Logged in")
+		app.infoLog.Println("Logged in")
 
 		http.Redirect(w, r, "/submit", http.StatusSeeOther)
 		return
 	}
 
 	app.render(w, r, "login.html", &templateData{
-		Form: *NewForm(r.PostForm),
+		Form: NewForm(r.PostForm),
 	})
 }
 
@@ -133,7 +127,7 @@ func (app *application) register(w http.ResponseWriter, r *http.Request) {
 		if !form.Valid() {
 			form.Errors.Add("generic", "The data you submitted was not valid")
 			app.render(w, r, "register.html", &templateData{
-				Form: *form,
+				Form: form,
 			})
 			return
 		}
@@ -147,7 +141,7 @@ func (app *application) register(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			form.Errors.Add("generic", err.Error())
 			app.render(w, r, "register.html", &templateData{
-				Form: *form,
+				Form: form,
 			})
 			return
 		}
@@ -158,7 +152,7 @@ func (app *application) register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	app.render(w, r, "register.html", &templateData{
-		Form: *NewForm(r.PostForm),
+		Form: NewForm(r.PostForm),
 	})
 }
 func (app *application) about(w http.ResponseWriter, r *http.Request) {
@@ -171,7 +165,7 @@ func (app *application) vote(w http.ResponseWriter, r *http.Request) {
 
 	err := app.postRepo.AddVote(u.ID, postID)
 	if err != nil {
-		app.errorLogger.Printf("error adding vote: %s\n", err.Error())
+		app.errorLog.Printf("error adding vote: %s\n", err.Error())
 		app.session.Put(r, "flash", "voting failed")
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
@@ -181,55 +175,115 @@ func (app *application) vote(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+func (app *application) comments(w http.ResponseWriter, r *http.Request) {
+	postID := app.readIntWithDefault(r, "post_id", 0)
+	u := app.getUserFromContext(r.Context())
+
+	post, err := app.postRepo.GetByID(postID)
+	if err != nil {
+		app.errorLog.Printf("error getting post: %s\n", err.Error())
+		app.session.Put(r, "flash", "error getting post")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	comments, err := app.postRepo.GetComments(postID)
+	if err != nil {
+		app.errorLog.Printf("error getting comments: %s\n", err.Error())
+		app.session.Put(r, "flash", "error getting comments")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		form := NewForm(r.PostForm)
+		form.Required("comment").
+			MinLength("comment", 5).
+			MaxLength("comment", 1000)
+
+		if !form.Valid() {
+			form.Errors.Add("generic", "The data you submitted was not valid")
+			app.render(w, r, "comments.html", &templateData{
+				Form:     form,
+				Comments: comments,
+				Post:     post,
+			})
+			return
+		}
+
+		_, err = app.postRepo.AddComment(postID, u.ID, r.FormValue("comment"))
+		if err != nil {
+			app.errorLog.Printf("error adding comment: %s\n", err.Error())
+			app.session.Put(r, "flash", "error adding comment")
+			http.Redirect(w, r, fmt.Sprintf("/comments?post_id=%d", postID), http.StatusSeeOther)
+			return
+		}
+		http.Redirect(w, r, fmt.Sprintf("/comments?post_id=%d", postID), http.StatusSeeOther)
+		return
+	}
+
+	app.render(w, r, "comments.html", &templateData{
+		Form:     NewForm(url.Values{}),
+		Comments: comments,
+		Post:     post,
+	})
+
+}
+
 func (app *application) contact(w http.ResponseWriter, r *http.Request) {
 	app.render(w, r, "contact.html", nil)
 }
 
 func (app *application) submit(w http.ResponseWriter, r *http.Request) {
 
-	if r.Method == http.MethodPost{
+	if r.Method == http.MethodPost {
 		if err := r.ParseForm(); err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
 		form := NewForm(r.PostForm)
 		form.Required("title", "url").
-		MaxLength("title", 255).
-		MaxLength("url", 255).
-		MinLength("url", 3)
+			MaxLength("title", 255).
+			MaxLength("url", 255).
+			MinLength("url", 3)
 
-		if !form.Valid(){
-		form.Errors.Add("generic", "This submited data was not valid")
-		app.render(w, r, "submit.html", &templateData{
-			Form: *form,
-		})
+		if !form.Valid() {
+			form.Errors.Add("generic", "This submited data was not valid")
+			app.render(w, r, "submit.html", &templateData{
+				Form: form,
+			})
+			return
+		}
+
+		title := r.FormValue("title")
+		url := r.FormValue("url")
+
+		user := app.getUserFromContext(r.Context())
+		id, err := app.postRepo.CreatePost(title, url, user.ID)
+		if err != nil {
+			app.errorLog.Printf("error creating post: %s\n", err.Error())
+			form.Errors.Add("generic", err.Error())
+			app.render(w, r, "submit.html", &templateData{
+				Form: form,
+			})
+			return
+		}
+
+		app.session.Put(r, "flash", "Your link has been submitted")
+		app.infoLog.Printf("post created with %d", id)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+
 		return
-	}
 
-	title := r.FormValue("title")
-	url := r.FormValue("url")
-
-	user := app.getUserFromContext(r.Context())
-	id, err := app.postRepo.CreatePost(title, url, user.ID)
-	if err != nil{
-		app.errorLogger.Printf("error creating post: %s\n", err.Error())
-		form.Errors.Add("generic", err.Error())
-		app.render(w, r, "submit.html", &templateData{
-			Form: *form,
-		})
-		return
-	}
-
-	app.session.Put(r, "flash", "Your link has been submitted")
-	app.infoLogger.Printf("post created with %d", id)
-	http.Redirect(w, r, "/", http.StatusSeeOther)
-
-	return
-		 
 	}
 
 	app.render(w, r, "submit.html", &templateData{
-		Form: *NewForm(r.PostForm),
+		Form: NewForm(r.PostForm),
 	})
 }
 

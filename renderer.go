@@ -16,16 +16,19 @@ type TemplateRenderer struct {
 }
 
 type templateData struct {
-	Form            Form
+	Form            *Form
 	IsAuthenticated bool
 	Flash           string
 	Posts           []Post
 	Metadata        Metadata
+	Comments        []Comment
+	Post            *Post
+	Query           string
 	NextLink        string
 	PrevLink        string
 }
 
-func NewTemplateRenderer(templateDir string , isDev bool) *TemplateRenderer {
+func NewTemplateRenderer(templateDir string, isDev bool) *TemplateRenderer {
 	return &TemplateRenderer{
 		templateDir: templateDir,
 		cache:       make(map[string]*template.Template),
@@ -50,9 +53,7 @@ func (t *TemplateRenderer) Render(w http.ResponseWriter, templateName string, da
 func (t *TemplateRenderer) getTemplate(templateName string) (*template.Template, error) {
 	if !t.dev {
 		t.mutex.RLock()
-
-		tmpl, ok := t.cache[templateName]
-		if ok {
+		if tmpl, ok := t.cache[templateName]; ok {
 			t.mutex.RUnlock()
 			return tmpl, nil
 		}
@@ -60,7 +61,6 @@ func (t *TemplateRenderer) getTemplate(templateName string) (*template.Template,
 	}
 
 	tmpl, err := t.parseTemplate(templateName)
-
 	if err != nil {
 		return nil, err
 	}
@@ -80,13 +80,13 @@ func (t *TemplateRenderer) parseTemplate(templateName string) (*template.Templat
 	files := []string{templatePath}
 
 	layoutPath := path.Join(t.templateDir, "layouts/*.html")
-	layout, err := filepath.Glob(layoutPath)
+	layouts, err := filepath.Glob(layoutPath)
 	if err == nil {
-		files = append(files, layout...)
+		files = append(files, layouts...)
 	}
 
-	partialsPath := path.Join(t.templateDir, "partials/*.html")
-	partials, err := filepath.Glob(partialsPath)
+	partialPath := path.Join(t.templateDir, "partials/*.html")
+	partials, err := filepath.Glob(partialPath)
 	if err == nil {
 		files = append(files, partials...)
 	}

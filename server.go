@@ -6,10 +6,13 @@ import (
 )
 
 func (app *application) serve() error {
-	serv := http.Server{
-		Addr:    ":8080",
-		ReadTimeout: 2 * time.Second,
-		Handler: app.routes(),
+
+	srv := http.Server{
+		Addr:         ":8080",
+		ReadTimeout:  2 * time.Second,
+		WriteTimeout: 2 * time.Second,
+		Handler:      app.routes(),
 	}
-	return serv.ListenAndServe()
+
+	return srv.ListenAndServe()
 }

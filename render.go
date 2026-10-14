@@ -5,9 +5,8 @@ import (
 )
 
 func (app *application) render(w http.ResponseWriter, r *http.Request, filename string, data *templateData) {
-
 	if app.tp == nil {
-		http.Error(w, "template renderer is not initialized", http.StatusInternalServerError)
+		http.Error(w, "template rendering engine is not set", http.StatusInternalServerError)
 		return
 	}
 
@@ -19,9 +18,9 @@ func (app *application) defaultTemplateData(data *templateData, r *http.Request)
 		data = &templateData{}
 	}
 
+	data.Flash = app.session.PopString(r, "flash")
 	data.IsAuthenticated = app.isAuthenticated(r)
-	if app.session != nil {
-		data.Flash = app.session.PopString(r, "flash")
-	}
+	app.infoLog.Printf("Flash cookie: %s; called by %s\n", data.Flash, r.URL.Path)
+
 	return data
 }
