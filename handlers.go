@@ -24,10 +24,8 @@ func (app *application) readIntWithDefault(r *http.Request, key string, dvalue i
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
 
 	filter := Filter{
-		Query:    r.URL.Query().Get("q"),
-		OrderBy:  r.URL.Query().Get("order_by"),
-		Page:     app.readIntWithDefault(r, "page", 1),
-		PageSize: app.readIntWithDefault(r, "page_size", 50),
+		Page: 1,
+		PageSize: 10,
 	}
 
 	posts, metadata, err := app.postRepo.GetAll(filter)
@@ -41,11 +39,6 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	app.render(w, r, "index.html", &templateData{
 		Posts:    posts,
 		Metadata: metadata,
-		Query:    filter.Query,
-		NextLink: fmt.Sprintf("/?q=%s&order_by=%s&page=%d&page_size=%d",
-			filter.Query, filter.OrderBy, metadata.NextPage, filter.PageSize),
-		PrevLink: fmt.Sprintf("/?q=%s&order_by=%s&page=%d&page_size=%d",
-			filter.Query, filter.OrderBy, metadata.PrevPage, filter.PageSize),
 	})
 }
 

@@ -10,7 +10,11 @@ require (
 
 require github.com/justinas/alice v1.2.0
 
-require github.com/dromara/carbon/v2 v2.6.9 // indirect
+require (
+	github.com/dromara/carbon/v2 v2.6.9 // indirect
+	github.com/stretchr/testify v1.12.1 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
+)
 
 require (
 	github.com/golangcollege/sessions v1.2.0
